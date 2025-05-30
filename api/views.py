@@ -9,18 +9,26 @@ from .permissions import IsSingerOrReadOnly
 class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
     permission_classes = [IsSingerOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['singer__name']
-    search_fields = ['title']
-    ordering_fields = ['title', 'duration_minutes', 'duration_seconds', 'singer__name']
-    ordering = ['title']  # default ordering
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'singer__name']
 
     def get_queryset(self):
+        queryset = Songs.objects.all()
+        search_query = self.request.query_params.get('search', None)
+        
+        if search_query:
+            # Case-insensitive partial matching for both title and singer name
+            queryset = queryset.filter(
+                title__icontains=search_query
+            ) | queryset.filter(
+                singer__name__icontains=search_query
+            )
+        
         # If user is authenticated, show only their songs
         if self.request.user.is_authenticated:
-            return Songs.objects.filter(singer__user=self.request.user)
-        # Otherwise show all songs
-        return Songs.objects.all()
+            queryset = queryset.filter(singer__user=self.request.user)
+            
+        return queryset.distinct()  # Use distinct to avoid duplicates
 
     def perform_create(self, serializer):
         # Get the singer associated with the current user
