@@ -5,12 +5,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Songs, Singer
 from .serializers import SongSerializer, SingerSerializer
 from .permissions import IsSingerOrReadOnly
+from .throttles import SongCreateRateThrottle, SongListRateThrottle, SingerCreateRateThrottle
 
 class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
     permission_classes = [IsSingerOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['title', 'singer__name']
+    throttle_classes = [SongCreateRateThrottle, SongListRateThrottle]
 
     def get_queryset(self):
         queryset = Songs.objects.all()
@@ -38,6 +40,7 @@ class SongViewSet(viewsets.ModelViewSet):
 class SingerViewSet(viewsets.ModelViewSet):
     queryset = Singer.objects.all()
     serializer_class = SingerSerializer
+    throttle_classes = [SingerCreateRateThrottle]
     
     def get_permissions(self):
         if self.action == 'create':
