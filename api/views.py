@@ -6,9 +6,15 @@ from .serializers import SongSerializer, SingerSerializer
 from .permissions import IsSingerOrReadOnly
 
 class SongViewSet(viewsets.ModelViewSet):
-    queryset = Songs.objects.all()
     serializer_class = SongSerializer
     permission_classes = [IsSingerOrReadOnly]
+
+    def get_queryset(self):
+        # If user is authenticated, show only their songs
+        if self.request.user.is_authenticated:
+            return Songs.objects.filter(singer__user=self.request.user)
+        # Otherwise show all songs
+        return Songs.objects.all()
 
     def perform_create(self, serializer):
         # Get the singer associated with the current user
